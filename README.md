@@ -26,3 +26,6 @@ npm run dev
 ## 참고 문서
 - guide/mentor-mentee-api-spec.md
 - guide/mentor-mentee-app-requirements.md
+=======
+# lipcoding
+>>>>>>> 2b41a0be4917951eb9650065b522c465a1af9984
