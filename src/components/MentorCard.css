@@ -1,0 +1,80 @@
+.mentor-card {
+  background: #232946;
+  border-radius: 1em;
+  box-shadow: 0 2px 12px #0002;
+  padding: 1.5em;
+  margin: 1em 0;
+  display: flex;
+  align-items: center;
+  gap: 1.5em;
+  transition: box-shadow 0.2s;
+}
+.mentor-card:hover {
+  box-shadow: 0 4px 24px #7c3aed55;
+}
+.mentor-card-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #7c3aed;
+  background: #fff;
+}
+.mentor-card-body {
+  flex: 1;
+}
+.mentor-card-name {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #fff;
+}
+.mentor-card-tech {
+  color: #7c3aed;
+  font-size: 0.95em;
+  margin: 0.3em 0;
+}
+.mentor-card-intro {
+  color: #eaeaea;
+  font-size: 0.95em;
+  margin-bottom: 0.7em;
+}
+.mentor-card-btn {
+  background: #7c3aed;
+  color: #fff;
+  border: none;
+  border-radius: 0.5em;
+  padding: 0.5em 1.2em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+  position: relative;
+}
+.mentor-card-btn:disabled {
+  background: #aaa;
+  cursor: not-allowed;
+}
+.mentor-card-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid #fff;
+  border-top: 2px solid #7c3aed;
+  border-radius: 50%;
+  animation: mentor-spin 0.7s linear infinite;
+  vertical-align: middle;
+}
+@keyframes mentor-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@media (max-width: 600px) {
+  .mentor-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1em;
+  }
+  .mentor-card-img {
+    width: 80px;
+    height: 80px;
+  }
+}
