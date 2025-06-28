@@ -15,17 +15,21 @@
 ### 백엔드(FastAPI)
 ```bash
 cd backend
-uvicorn main:app --reload
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8080
 ```
+- API 기본 경로: http://localhost:8080/api
+- Swagger: http://localhost:8080/api/swagger-ui
+- OpenAPI: http://localhost:8080/api/openapi.json
 
 ### 프론트엔드(React+Vite)
 ```bash
-npm run dev
+cd src
+npm install
+npm run dev -- --port 3000
 ```
+- 기본 URL: http://localhost:3000
 
 ## 참고 문서
 - guide/mentor-mentee-api-spec.md
 - guide/mentor-mentee-app-requirements.md
-=======
-# lipcoding
->>>>>>> 2b41a0be4917951eb9650065b522c465a1af9984
