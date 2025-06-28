@@ -3,7 +3,7 @@
 # 마지막 수정: 2025-06-28
 # 주요 기능: 회원가입/로그인, 프로필 관리, 멘토 리스트, 매칭, 이미지 업로드, 보안 등
 
-from fastapi import FastAPI, HTTPException, Depends, Body, UploadFile, File
+from fastapi import FastAPI, HTTPException, Depends, Body, UploadFile, File, APIRouter
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -20,16 +20,18 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+app = FastAPI(openapi_url="/api/openapi.json", docs_url=None)
 
 # CORS 허용 (프론트엔드와 포트 다를 때 네트워크 오류 방지)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 또는 ["http://localhost:5173"]
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+api_router = APIRouter(prefix="/api")
 
 SECRET_KEY = "your-secret-key"  # 실제 서비스에서는 환경변수로 관리
 ALGORITHM = "HS256"
@@ -166,7 +168,7 @@ def get_db():
     finally:
         db.close()
 
-@app.post("/signup", status_code=201)
+@api_router.post("/signup", status_code=201)
 def signup(user: UserSignup, db=Depends(get_db)):
     if db.query(User).filter(User.email == user.email).first():
         raise HTTPException(status_code=400, detail="이미 가입된 이메일입니다.")
@@ -176,7 +178,7 @@ def signup(user: UserSignup, db=Depends(get_db)):
     db.commit()
     return {"msg": "회원가입 성공"}
 
-@app.post("/login", response_model=Token)
+@api_router.post("/login", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
     db = SessionLocal()
     user = db.query(User).filter(User.email == form_data.username).first()
@@ -195,11 +197,11 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     access_token = create_access_token(user_dict)
     return {"access_token": access_token, "token_type": "bearer"}
 
-@app.get("/profile", response_model=UserProfile)
+@api_router.get("/profile", response_model=UserProfile)
 def get_profile(current_user: dict = Depends(get_current_user)):
     return {"email": current_user.email, "name": current_user.name, "role": current_user.role, "intro": current_user.intro}
 
-@app.put("/profile", response_model=UserProfile)
+@api_router.put("/profile", response_model=UserProfile)
 def update_profile(profile: UserProfile, current_user: dict = Depends(get_current_user)):
     db = SessionLocal()
     user = db.query(User).filter(User.email == current_user.email).first()
@@ -210,7 +212,7 @@ def update_profile(profile: UserProfile, current_user: dict = Depends(get_curren
     db.close()
     return {"email": user.email, "name": user.name, "role": user.role, "intro": user.intro}
 
-@app.get("/mentors", response_model=List[MentorListItem])
+@api_router.get("/mentors", response_model=List[MentorListItem])
 def get_mentors(q: Optional[str] = None, sort: Optional[str] = None):
     db = SessionLocal()
     mentors = db.query(User).filter(User.role == UserRole.mentor)
@@ -225,7 +227,7 @@ def get_mentors(q: Optional[str] = None, sort: Optional[str] = None):
     db.close()
     return [{"email": m.email, "name": m.name, "intro": m.intro, "tech_stack": m.tech_stack} for m in mentors]
 
-@app.post("/match", response_model=MatchStatus)
+@api_router.post("/match", response_model=MatchStatus)
 def request_match(req: MatchRequest, current_user: User = Depends(get_current_user), db=Depends(get_db)):
     if current_user.role != "mentee":
         raise HTTPException(status_code=403, detail="멘티만 매칭 요청 가능")
@@ -239,7 +241,7 @@ def request_match(req: MatchRequest, current_user: User = Depends(get_current_us
     db.commit()
     return MatchStatus(mentee_email=current_user.email, mentor_email=req.mentor_email, status="pending", message=req.message)
 
-@app.get("/match/requests", response_model=List[MatchStatus])
+@api_router.get("/match/requests", response_model=List[MatchStatus])
 def get_match_requests(current_user: User = Depends(get_current_user), db=Depends(get_db)):
     if current_user.role == "mentor":
         requests = db.query(Match).filter(Match.mentor_email == current_user.email).all()
@@ -247,7 +249,7 @@ def get_match_requests(current_user: User = Depends(get_current_user), db=Depend
         requests = db.query(Match).filter(Match.mentee_email == current_user.email).all()
     return [MatchStatus(mentee_email=m.mentee_email, mentor_email=m.mentor_email, status=m.status, message=m.message) for m in requests]
 
-@app.post("/match/respond", response_model=MatchStatus)
+@api_router.post("/match/respond", response_model=MatchStatus)
 def respond_match(mentee_email: EmailStr, accept: bool = Body(...), current_user: User = Depends(get_current_user), db=Depends(get_db)):
     if current_user.role != "mentor":
         raise HTTPException(status_code=403, detail="멘토만 요청 수락/거절 가능")
@@ -260,7 +262,7 @@ def respond_match(mentee_email: EmailStr, accept: bool = Body(...), current_user
     db.commit()
     return MatchStatus(mentee_email=request.mentee_email, mentor_email=request.mentor_email, status=request.status, message=request.message)
 
-@app.delete("/match/cancel", status_code=204)
+@api_router.delete("/match/cancel", status_code=204)
 def cancel_match(current_user: User = Depends(get_current_user), db=Depends(get_db)):
     # 멘티만 자신의 매칭 요청 취소 가능
     if current_user.role != "mentee":
@@ -275,7 +277,7 @@ def cancel_match(current_user: User = Depends(get_current_user), db=Depends(get_
 PROFILE_IMG_DIR = "profile_images"
 os.makedirs(PROFILE_IMG_DIR, exist_ok=True)
 
-@app.post("/profile/image")
+@api_router.post("/profile/image")
 def upload_profile_image(file: UploadFile = File(...), current_user: User = Depends(get_current_user), db=Depends(get_db)):
     # 파일 확장자 및 크기 체크
     if not (file.filename.endswith('.jpg') or file.filename.endswith('.png')):
@@ -295,7 +297,7 @@ def upload_profile_image(file: UploadFile = File(...), current_user: User = Depe
     db.commit()
     return {"msg": "프로필 이미지 업로드 성공", "image_url": f"/profile/image/{current_user.email}"}
 
-@app.get("/profile/image/{email}")
+@api_router.get("/profile/image/{email}")
 def get_profile_image(email: str, db=Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
     if not user:
@@ -309,17 +311,19 @@ def get_profile_image(email: str, db=Depends(get_db)):
     from fastapi.responses import FileResponse
     return FileResponse(user.profile_image)
 
-@app.get("/openapi.json")
+app.include_router(api_router)
+
+@app.get("/api/openapi.json")
 def custom_openapi():
     return app.openapi()
 
-@app.get("/swagger-ui")
+@app.get("/api/swagger-ui")
 def custom_swagger_ui():
-    return get_swagger_ui_html(openapi_url="/openapi.json", title="Mentor-Mentee API Docs")
+    return get_swagger_ui_html(openapi_url="/api/openapi.json", title="Mentor-Mentee API Docs")
 
 @app.get("/", include_in_schema=False)
 def root_redirect():
-    return RedirectResponse(url="/swagger-ui")
+    return RedirectResponse(url="/api/swagger-ui")
 
 # 더미 멘토/멘티 계정 자동 생성 (테스트용)
 def create_dummy_users():
